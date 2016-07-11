@@ -1,0 +1,82 @@
+SIMULACAO DC
+
+.include 'ams35ps.lib'
+.include 'mos-subcirc.inc '
+
+**** 1) DECLARACAO SUBCIRCUITO ***********************************
+
+* .subckt nome_ckt nodo1 nodo2 nodo3...
+* nome_tx (DRAIN GATE SOURCE BULK) modelo w=[tamanho] l=[largura_do_canal]
+* ...
+* .ends
+
+.subckt inversor gate saida vdd gnd
+xpmos0 (saida gate vdd vdd) submodp w=3u l=0.35u
+xnmos0 (saida gate gnd gnd) submodn w=2u l=0.35u
+.ends
+
+*******************************************************************
+**** 2) DECLARACAO DOS COMPONENTES E SETUP DA SIMULACAO ***********
+
+*** fontes de tensão *******
+* v[nome] N+ N- dc=[valor]
+*          OU
+* v[nome] N+ N- pulse=(N- N+ TD TR TF PW PER)
+
+vdd (vdd 0) dc=3.3V
+vdummy (out1 out2) dc=0V
+vpmos (vdd outp) dc=0V
+vin (in 0) DC=0 pulse=(0 3.3 0.5n 200p 200p 2.5n 5n)
+
+*** instancia do subckt inversor ******
+* x[nome] (nodo1 nodo2 nodo3 ...) nome_subckt
+
+xinversor0 (in out0 vdd 0) inversor
+xinversor1 (out0 out1 outp 0) inversor
+xinversor2 (out2 out3 vdd 0) inversor
+
+*** instancia de um capacitor ******
+* cap N+ N- capacitancia
+
+cap out3 0 50fF
+
+*** vamos criar marcadores como fontes DC constantes para facilitar a visualizacao
+vmarker0 (marker_50_pct 0) dc=1.65V
+vmarker1 (marker_90_pct 0) dc=2.97V
+vmarker2 (marker_10_pct 0) dc=0.33V
+
+********************************************************************
+**** 3) EXECUCAO E PLOTAGEM DOS RESULTADOS *************************
+.control
+destroy all
+
+*** temperatura ambiente = 300K = 27 C ******
+set temp=27
+
+*** roda uma analise transiente de 5ns a passos de 0.1n ******
+tran 0.1n 5n
+
+plot v(out0) v(out2) v(marker_50_pct) xlabel t ylabel V
+plot v(out1) v(marker_10_pct) v(marker_90_pct) xlabel t ylabel V
+
+plot v(in) v(out0) v(out1) v(out3) xlabel t ylabel V
+* vermelho verde azul rosa
+
+plot i(vdummy) xlabel t ylabel i(vdummy)
+
+plot i(vpmos) xlabel t ylabel i(vpmos)
+
+* plot i(vdummy) v(out1) xlabel t ylabel i(outinv2)
+
+echo potencia
+print 3.3*mean(abs(i(vdummy)))
+echo energia
+print 3.3*mean(abs(i(vdummy)))*5n
+
+echo potencia pmos
+print 3.3*mean(abs(i(vpmos)))
+echo energia pmos
+print 3.3*mean(abs(i(vpmos)))*5n
+
+.endc
+.end

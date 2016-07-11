@@ -1,0 +1,79 @@
+SIMULACAO DC
+
+.include 'ams35ps.lib'
+.include 'mos-subcirc.inc '
+
+**** 1) DECLARACAO SUBCIRCUITO ***********************************
+
+* .subckt nome_ckt nodo1 nodo2 nodo3...
+* nome_tx (DRAIN GATE SOURCE BULK) modelo w=[tamanho] l=[largura_do_canal]
+* ...
+* .ends
+
+.subckt inversor gate saida vdd gnd
+xpmos0 (saida gate vdd vdd) submodp w=5u l=0.35u
+xnmos0 (saida gate gnd gnd) submodn w=3u l=0.35u
+.ends
+
+.subckt NAND4 A B C D out vdd gnd
+X0 (out A vdd vdd) submodp w=5u l=0.35u
+X1 (out B vdd vdd) submodp w=5u l=0.35u
+X2 (out C vdd vdd) submodp w=5u l=0.35u
+X3 (out D vdd vdd) submodp w=5u l=0.35u
+X4 (out A no1 gnd) submodn w=3u l=0.35u
+X5 (no1 B no2 gnd) submodn w=3u l=0.35u
+X6 (no2 C no3 gnd) submodn w=3u l=0.35u
+X7 (no3 D gnd gnd) submodn w=3u l=0.35u
+.ends NAND4
+
+*******************************************************************
+**** 2) DECLARACAO DOS COMPONENTES E SETUP DA SIMULACAO ***********
+*** fontes de tensão *******
+* v[nome] N+ N- dc=[valor]
+*          OU
+* v[nome] N+ N- pulse=(N- N+ TD TR TF PW PER)
+
+vdd (vdd 0) dc=3.3V
+vdummy (out_nand out_dummy) dc=0V
+vin (in 0) DC=0 pulse=(0 3.3 0.5n 200p 200p 2.5n 5n)
+
+*** instancia do subckt inversor ******
+* x[nome] (nodo1 nodo2 nodo3 ...) nome_subckt
+
+xinversor_x (in out_inv_x vdd 0) inversor
+xnandquatro (vdd vdd vdd out_inv_x out_nand vdd 0) NAND4
+xinversor_y (out_dummy out3 vdd 0) inversor
+
+*** instancia de um capacitor ******
+* cap N+ N- capacitancia
+
+cap out3 0 0.5pF
+
+*** vamos criar marcadores como fontes DC constantes para facilitar a visualizacao
+vmarker0 (marker_50_pct 0) dc=1.65V
+vmarker1 (marker_90_pct 0) dc=2.97V
+vmarker2 (marker_10_pct 0) dc=0.33V
+
+********************************************************************
+**** 3) EXECUCAO E PLOTAGEM DOS RESULTADOS *************************
+
+.control
+destroy all
+
+*** temperatura ambiente = 300K = 27 C ******
+set temp=27
+
+*** roda uma analise transiente de 5ns a passos de 0.1n ******
+tran 0.1n 5n
+
+plot v(out_nand) v(in) v(marker_50_pct) v(marker_10_pct) v(marker_90_pct) xlabel t ylabel V
++ title "Inverted D input vs NAND Outputs"
+plot v(out_inv_x) v(marker_10_pct) v(marker_90_pct) xlabel t ylabel V
+
+plot v(in) v(out_inv_x) v(out_nand) v(out3) xlabel t ylabel V
+
+print 3.3*mean(abs(i(vdummy)))
+print 3.3*5n*mean(abs(i(vdummy)))
+
+.endc
+.end

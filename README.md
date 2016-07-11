@@ -1,2 +1,2 @@
 # inf-cd
-Trabalhos de Circuitos Digitais - Instituto de Informática da UFRGS
+Trabalhos da disciplina INF01058 - Circuitos Digitais - Instituto de Informática da UFRGS

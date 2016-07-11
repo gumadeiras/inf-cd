@@ -1,0 +1,54 @@
+SIMULACAO DC
+
+.include 'ams35ps.lib'
+.include 'mos-subcirc.inc '
+
+**** 1) DECLARACAO SUBCIRCUITO ***********************************
+
+* .subckt nome_ckt nodo1 nodo2 nodo3...
+* nome_tx (DRAIN GATE SOURCE BULK) modelo w=[tamanho] l=[largura_do_canal]
+* ...
+* .ends
+
+.subckt inversor gate saida vdd gnd
+xpmos0 (saida gate vdd vdd) submodp w=3u l=0.35u
+xnmos0 (saida gate gnd gnd) submodn w=2u l=0.35u
+.ends
+
+*******************************************************************
+**** 2) DECLARACAO DOS COMPONENTES E SETUP DA SIMULACAO ***********
+*** fontes de tensão *******
+* v[nome] N+ N- dc=[valor]
+*          OU
+* v[nome] N+ N- pulse=(N- N+ TD TR TF PW PER)
+
+vdd (vdd 0) dc=3.3V
+vin (in 0) DC=0 pulse=(0 3.3 0.5n 200p 200p 2.5n 5n)
+
+*** instancia do subckt inversor ******
+* x[nome] (nodo1 nodo2 nodo3 ...) nome_subckt
+
+xinversor0 (in out vdd 0) inversor
+
+*** vamos criar marcadores como fontes DC constantes para facilitar a visualizacao
+vmarker0 (marker_minus_1 0) dc=-1V
+
+********************************************************************
+**** 3) EXECUCAO E PLOTAGEM DOS RESULTADOS *************************
+
+.control
+
+* deleta dados de simulacoes anteriores
+destroy all
+
+* cria uma analise DC com "in" sendo o sinal de entrada
+* que vai de 0 a 3.3V a passos de 0.01V
+dc vin 0V 3.3V 0.01V
+
+plot v(out) v(in) xlabel Vin ylabel Vout
+
+plot deriv(v(out)) marker_minus_1 ylabel 'Derivada de Vout'
+
+.endc
+
+.end
